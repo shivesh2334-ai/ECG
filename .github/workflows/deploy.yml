@@ -1,0 +1,28 @@
+name: CI Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        # Note: ANTHROPIC_API_KEY is used server-side only (via /api/anthropic serverless function).
+        # Set it in: Vercel Dashboard > Project Settings > Environment Variables
+        # For GitHub Actions secrets: Settings > Secrets and variables > Actions > ANTHROPIC_API_KEY
