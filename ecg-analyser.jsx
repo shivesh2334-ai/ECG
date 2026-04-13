@@ -11,23 +11,29 @@ const injectStyles = () => {
     @keyframes emergPulse { 0%,100%{background:#FF525215} 50%{background:#FF524425} }
   `;
   document.head.appendChild(el);
+  return () => { document.head.removeChild(el); };
 };
 
 // ─── Load jsPDF + autoTable from CDN ─────────────────────────
-const loadJsPDF = () => new Promise((resolve, reject) => {
-  if (window.jspdf?.jsPDF) { resolve(); return; }
-  const s1 = document.createElement("script");
-  s1.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-  s1.onload = () => {
-    const s2 = document.createElement("script");
-    s2.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js";
-    s2.onload = resolve;
-    s2.onerror = reject;
-    document.head.appendChild(s2);
-  };
-  s1.onerror = reject;
-  document.head.appendChild(s1);
-});
+let _jspdfPromise = null;
+const loadJsPDF = () => {
+  if (window.jspdf?.jsPDF) return Promise.resolve();
+  if (_jspdfPromise) return _jspdfPromise;
+  _jspdfPromise = new Promise((resolve, reject) => {
+    const s1 = document.createElement("script");
+    s1.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    s1.onload = () => {
+      const s2 = document.createElement("script");
+      s2.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js";
+      s2.onload = resolve;
+      s2.onerror = (err) => { _jspdfPromise = null; reject(err); };
+      document.head.appendChild(s2);
+    };
+    s1.onerror = (err) => { _jspdfPromise = null; reject(err); };
+    document.head.appendChild(s1);
+  });
+  return _jspdfPromise;
+};
 
 // ─── PDF generation ───────────────────────────────────────────
 async function generatePDF(report, patient, imageUrl) {
@@ -420,17 +426,27 @@ async function generatePDF(report, patient, imageUrl) {
 
 // ─── API ──────────────────────────────────────────────────────
 const MODEL = "claude-sonnet-4-20250514";
+const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 
 async function callClaude(system, userText, imageB64, mime) {
+  if (!API_KEY) throw new Error("VITE_ANTHROPIC_API_KEY is not set. Add it to your .env file.");
   const content = [];
   if (imageB64) content.push({ type: "image", source: { type: "base64", media_type: mime, data: imageB64 } });
   content.push({ type: "text", text: userText });
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1000, system, messages: [{ role: "user", content }] }),
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": API_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({ model: MODEL, max_tokens: 2048, system, messages: [{ role: "user", content }] }),
   });
-  if (!res.ok) throw new Error(`API ${res.status}`);
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`API error ${res.status}${detail ? ": " + detail : ""}`);
+  }
   const data = await res.json();
   return data.content?.map(b => b.text || "").join("") || "";
 }
@@ -440,7 +456,9 @@ function parseJSON(text) {
     const clean = text.replace(/```json|```/g, "").trim();
     const m = clean.match(/\{[\s\S]*\}/);
     if (m) return JSON.parse(m[0]);
-  } catch {}
+  } catch (err) {
+    console.warn("parseJSON failed:", err);
+  }
   return null;
 }
 
@@ -496,6 +514,7 @@ export default function App() {
 
   const handleFile = f => {
     if (!f || !f.type.startsWith("image/")) return;
+    if (f.size > 10 * 1024 * 1024) { setError("Image too large. Please use a file under 10 MB."); return; }
     const r = new FileReader();
     r.onload = e => setImage({ b64: e.target.result.split(",")[1], mime: f.type, url: e.target.result });
     r.readAsDataURL(f);
@@ -512,14 +531,17 @@ export default function App() {
     try {
       upd(0, { status: "running" });
       t = parseJSON(await callClaude(SYS_TRIAGE, `${c}\n\nTriage this ECG.`, image.b64, image.mime));
+      if (!t) throw new Error("Triage stage returned no parseable JSON. Please retry.");
       upd(0, { status: "done", result: t });
 
       upd(1, { status: "running" });
       w = parseJSON(await callClaude(SYS_WAVEFORM, `${c}\nTriage:${JSON.stringify(t)}\n\nDetailed waveform analysis.`, image.b64, image.mime));
+      if (!w) throw new Error("Waveform stage returned no parseable JSON. Please retry.");
       upd(1, { status: "done", result: w });
 
       upd(2, { status: "running" });
       const s = parseJSON(await callClaude(SYS_SYNTHESIS, `${c}\nTriage:${JSON.stringify(t)}\nWaveform:${JSON.stringify(w)}\n\nFinal clinical report.`, image.b64, image.mime));
+      if (!s) throw new Error("Synthesis stage returned no parseable JSON. Please retry.");
       upd(2, { status: "done", result: s });
 
       setReport({ triage: t, waveform: w, synthesis: s });
@@ -555,6 +577,8 @@ export default function App() {
           <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, marginBottom: 2 }}>
             {[["upload", "📡 ECG Image"], ["patient", "🩺 Patient"]].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)}
+                role="tab"
+                aria-selected={tab === id}
                 style={{ flex: 1, background: "none", border: "none", padding: "9px 0", fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", cursor: "pointer", color: tab === id ? C.green : C.ts, borderBottom: tab === id ? `2px solid ${C.green}` : "2px solid transparent" }}>
                 {label}
               </button>
@@ -564,10 +588,14 @@ export default function App() {
           {tab === "upload" ? (
             <>
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Upload ECG image. Drop a file here or press Enter to browse."
                 style={{ border: `1px dashed ${image ? C.border : C.tm}`, borderRadius: 9, minHeight: 150, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}
                 onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
                 onDragOver={e => e.preventDefault()}
-                onClick={() => fileRef.current.click()}>
+                onClick={() => fileRef.current.click()}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileRef.current.click(); } }}>
                 {image
                   ? <img src={image.url} alt="ECG" style={{ width: "100%", display: "block" }} />
                   : <div style={{ textAlign: "center", padding: 20 }}>
@@ -597,8 +625,8 @@ export default function App() {
                 { label: "Prior ECG / history", key: "priorECG", type: "text", ph: "known LBBB, prior MI…" },
               ].map(({ label, key, type, ph }) => (
                 <div key={key}>
-                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.09em", color: C.ts, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-                  <input style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.tp, padding: "8px 11px", fontSize: 12, width: "100%", boxSizing: "border-box", fontFamily: "inherit", outline: "none" }}
+                  <label htmlFor={`patient-${key}`} style={{ display: "block", fontSize: 9, fontWeight: 700, letterSpacing: "0.09em", color: C.ts, textTransform: "uppercase", marginBottom: 4 }}>{label}</label>
+                  <input id={`patient-${key}`} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.tp, padding: "8px 11px", fontSize: 12, width: "100%", boxSizing: "border-box", fontFamily: "inherit", outline: "none" }}
                     type={type} placeholder={ph} value={patient[key]} onChange={e => updP(key, e.target.value)} />
                 </div>
               ))}
@@ -607,8 +635,8 @@ export default function App() {
                 { label: "Clinical setting", key: "scenario", opts: ["Emergency", "CCU", "ICU", "OPD", "Pre-operative", "Routine screening"] },
               ].map(({ label, key, opts }) => (
                 <div key={key}>
-                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.09em", color: C.ts, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
-                  <select style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.tp, padding: "8px 11px", fontSize: 12, width: "100%", fontFamily: "inherit", outline: "none" }}
+                  <label htmlFor={`patient-${key}`} style={{ display: "block", fontSize: 9, fontWeight: 700, letterSpacing: "0.09em", color: C.ts, textTransform: "uppercase", marginBottom: 4 }}>{label}</label>
+                  <select id={`patient-${key}`} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.tp, padding: "8px 11px", fontSize: 12, width: "100%", fontFamily: "inherit", outline: "none" }}
                     value={patient[key]} onChange={e => updP(key, e.target.value)}>
                     {opts.map(o => <option key={o}>{o}</option>)}
                   </select>
