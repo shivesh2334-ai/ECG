@@ -391,4 +391,118 @@ function ReportPanel({ report }) {
               <div key={i} style={{ ...S.stCell, borderColor: st.type === "elevation" ? "#FF444440" : "#FFB80040" }}>
                 <div style={S.stLead}>{st.lead}</div>
                 <div style={{ ...S.stType, color: st.type === "elevation" ? "#FF6060" : "#FFB800" }}>
-                  {st.type === "eleva
+                  {st.type === "elevation" ? "↑ Elevation" : "↓ Depression"}
+                </div>
+                <div style={{ fontSize: 13, color: "#8896A6", marginTop: 2 }}>{st.mm} mm</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Findings */}
+      {synthesis?.findings?.length > 0 && (
+        <div>
+          <div style={S.subHeading}>Key Findings</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {synthesis.findings.map((f, i) => (
+              <div key={i} style={{ fontSize: 14, color: "#C5D0DC", lineHeight: 1.5, paddingLeft: 12, borderLeft: `2px solid ${uc}30` }}>
+                {f}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recommendations */}
+      {synthesis?.recommendations?.length > 0 && (
+        <div>
+          <div style={S.subHeading}>Recommendations</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {synthesis.recommendations.map((r, i) => (
+              <div key={i} style={{ fontSize: 14, color: "#C5D0DC", lineHeight: 1.5, paddingLeft: 12, borderLeft: "2px solid #00E5A030" }}>
+                {r}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────
+const base = { fontFamily: "'DM Sans', sans-serif", boxSizing: "border-box" };
+const mono = { fontFamily: "'JetBrains Mono', monospace" };
+
+const styles = {
+  root: { ...base, minHeight: "100vh", backgroundColor: "#060A14", color: "#E0E7EF", display: "flex", flexDirection: "column" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 28px", borderBottom: "1px solid #111A28" },
+  headerLeft: { display: "flex", alignItems: "center", gap: 14 },
+  appTitle: { ...mono, fontSize: 15, fontWeight: 700, color: "#00E5A0", letterSpacing: 1.2, textTransform: "uppercase" },
+  appSub: { fontSize: 11, color: "#4A5A6A", marginTop: 2 },
+  headerRight: { display: "flex", gap: 8, alignItems: "center" },
+  modelBadge: { ...mono, fontSize: 11, color: "#8896A6", padding: "4px 10px", border: "1px solid #1A2535", borderRadius: 6, backgroundColor: "#0A1420" },
+  pipelineBadge: { ...mono, fontSize: 11, color: "#00E5A0", padding: "4px 10px", border: "1px solid #00E5A020", borderRadius: 6, backgroundColor: "#00E5A008" },
+  body: { display: "flex", flex: 1, overflow: "hidden" },
+  aside: { width: 360, borderRight: "1px solid #111A28", padding: 20, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 },
+  tabs: { display: "flex", gap: 4, marginBottom: 4 },
+  tab: { ...base, ...mono, fontSize: 11, padding: "6px 14px", borderRadius: 6, border: "1px solid #1A2535", backgroundColor: "transparent", color: "#8896A6", cursor: "pointer" },
+  tabActive: { backgroundColor: "#00E5A010", borderColor: "#00E5A030", color: "#00E5A0" },
+  dropzone: { border: "1.5px dashed #1A2535", borderRadius: 12, padding: 24, textAlign: "center", cursor: "pointer", transition: "border-color 0.2s" },
+  dzFilled: { borderColor: "#00E5A040", padding: 8 },
+  dzEmpty: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8 },
+  dzIcon: { fontSize: 28, opacity: 0.4 },
+  dzText: { fontSize: 14, fontWeight: 600, color: "#C5D0DC" },
+  dzSub: { fontSize: 12, color: "#4A5A6A" },
+  dzFormats: { ...mono, fontSize: 10, color: "#3A4A5A", marginTop: 4 },
+  ecgImg: { width: "100%", borderRadius: 8, maxHeight: 200, objectFit: "contain" },
+  clearBtn: { ...base, fontSize: 11, color: "#FF6060", background: "none", border: "none", cursor: "pointer", marginTop: 6 },
+  tipsBox: { backgroundColor: "#0A1420", borderRadius: 10, padding: 14, border: "1px solid #111A28" },
+  tipsTitle: { fontSize: 12, fontWeight: 600, color: "#8896A6", marginBottom: 8 },
+  tipItem: { fontSize: 12, color: "#4A5A6A", lineHeight: 1.8 },
+  form: { display: "flex", flexDirection: "column", gap: 10 },
+  formGroup: { display: "flex", flexDirection: "column", gap: 4 },
+  formLabel: { fontSize: 11, fontWeight: 600, color: "#4A5A6A", textTransform: "uppercase", letterSpacing: 0.5 },
+  formInput: { ...base, ...mono, fontSize: 13, padding: "8px 12px", backgroundColor: "#0A1420", border: "1px solid #1A2535", borderRadius: 8, color: "#E0E7EF", outline: "none" },
+  errorBox: { fontSize: 13, color: "#FF6060", padding: "10px 14px", borderRadius: 8, border: "1px solid #FF606030", backgroundColor: "#FF606008" },
+  analyseBtn: { ...base, ...mono, fontSize: 13, fontWeight: 700, padding: "12px 0", borderRadius: 10, border: "none", backgroundColor: "#00E5A0", color: "#060A14", cursor: "pointer", letterSpacing: 0.5, textTransform: "uppercase", width: "100%" },
+  disclaimer: { fontSize: 10, color: "#3A4A5A", textAlign: "center" },
+  main: { flex: 1, padding: 24, overflowY: "auto" },
+  pipelineCard: { marginBottom: 20 },
+  sectionTitle: { ...mono, fontSize: 12, fontWeight: 700, color: "#4A5A6A", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 },
+  pipeline: { display: "flex", gap: 12 },
+  pipeStep: { flex: 1, position: "relative", padding: 16, border: "1px solid #1A2535", borderRadius: 12, backgroundColor: "#0A1420", transition: "all 0.3s" },
+  pipeStepInner: { display: "flex", gap: 12, alignItems: "flex-start" },
+  connector: { position: "absolute", top: "50%", right: -12, width: 12, height: 1, backgroundColor: "#1A2535" },
+  dot: { width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13 },
+  pipeLabel: { fontSize: 13, fontWeight: 600, color: "#C5D0DC", marginBottom: 2 },
+  pipeDesc: { fontSize: 11, color: "#4A5A6A", lineHeight: 1.4 },
+  pipeStatus: { ...mono, fontSize: 10, marginTop: 6, color: "#4A5A6A" },
+  footer: { textAlign: "center", padding: "12px 0", fontSize: 10, color: "#2A3A4A", borderTop: "1px solid #111A28" },
+  idlePanel: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex: 1, gap: 16, padding: 40 },
+  idleTitle: { ...mono, fontSize: 18, fontWeight: 700, color: "#1A2535", textTransform: "uppercase", letterSpacing: 2 },
+  idleText: { fontSize: 14, color: "#3A4A5A", textAlign: "center", maxWidth: 420, lineHeight: 1.6 },
+  idleStages: { display: "flex", gap: 24, marginTop: 8 },
+  idleStage: { ...mono, fontSize: 11, color: "#2A3A4A", display: "flex", alignItems: "center", gap: 6 },
+  reportPanel: { display: "flex", flexDirection: "column", gap: 20, flex: 1 },
+  emergBanner: { ...mono, fontSize: 13, fontWeight: 700, color: "#FF4444", padding: "12px 16px", borderRadius: 10, border: "1px solid #FF444030", backgroundColor: "#FF444008", textAlign: "center", letterSpacing: 0.5 },
+  reportHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  urgBadge: { ...mono, fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 6, border: "1px solid", letterSpacing: 0.5 },
+  confBadge: { ...mono, fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 6, border: "1px solid #1A2535", backgroundColor: "#0A1420", letterSpacing: 0.5 },
+  impressionCard: { padding: 16, borderRadius: 12, border: "1px solid #1A2535", backgroundColor: "#0A1420" },
+  impressionLabel: { ...mono, fontSize: 10, fontWeight: 600, color: "#4A5A6A", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
+  impressionText: { fontSize: 15, fontWeight: 500, color: "#E0E7EF", lineHeight: 1.6 },
+  subHeading: { ...mono, fontSize: 11, fontWeight: 700, color: "#4A5A6A", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
+  measureGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 },
+  mCell: { padding: "10px 12px", borderRadius: 8, border: "1px solid #1A2535", backgroundColor: "#0A1420", textAlign: "center" },
+  mLabel: { fontSize: 10, color: "#4A5A6A", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.3 },
+  mVal: { ...mono, fontSize: 18, fontWeight: 700, color: "#E0E7EF" },
+  mUnit: { ...mono, fontSize: 10, color: "#4A5A6A", marginTop: 2 },
+  flagsRow: { display: "flex", gap: 8 },
+  flag: { ...mono, fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 6, border: "1px solid", letterSpacing: 0.5 },
+  stGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 8 },
+  stCell: { padding: "8px 10px", borderRadius: 8, border: "1px solid", backgroundColor: "#0A1420", textAlign: "center" },
+  stLead: { ...mono, fontSize: 13, fontWeight: 700, color: "#E0E7EF", marginBottom: 2 },
+  stType: { fontSize: 11, fontWeight: 600 },
+};
